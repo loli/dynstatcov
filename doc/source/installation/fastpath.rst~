@@ -1,0 +1,14 @@
+==================================
+Installing DynStatCov the fast way
+==================================
+.. note::
+
+    All installation instructions are for Ubuntu, but they should be simmilar for other distributions.
+
+.. code-block:: bash
+
+    sudo pip install dynstatcov
+ 
+Done.
+
+
