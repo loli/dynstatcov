@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ##########
 # Changelog
+# 2015-02-22 added a subtraction option for update()
 # 2015-02-20 properly documented and tested
 # 2015-02-17 created
 ##########
@@ -53,7 +54,7 @@ cdef class Dynstatcov:
     
     Implements a minimal method for dynamic updates of a statistic co-variance
     matrix upon the arrival of a new observation. Optimized for speed and low
-    memory requirements, the computational and memory requirements depend
+    memory requirements: the computational and memory requirements depend
     only on the number of features in each observation vector and not on the
     number of observations.    
     
@@ -65,7 +66,7 @@ cdef class Dynstatcov:
     Examples
     --------
     Example with initially three observations of four features each, which is
-    update ones.
+    updated once.
     
     >>> import numpy as np
     >>> from dynstatcov import Dynstatcov
@@ -99,9 +100,18 @@ cdef class Dynstatcov:
     array([ 1.58333337,  0.58333337, -2.16666675,  0.41666669,  0.25      ,
            -0.83333337,  0.08333334,  3.        , -0.5       ,  0.25      ], dtype=float64)
            
+    We can also remove a sample setting the optional second argument of `update()` non-zero.
+    
+    >>> dsc.update(y, 1)
+    >>> dsc.get_cov()
+    array([[ 2.33333397,  0.83333397, -3.16666698,  0.66666603],
+           [ 0.83333397,  0.33333206, -1.16666603,  0.16666603],
+           [-3.16666698, -1.16666603,  4.33333302, -0.83333397],
+           [ 0.66666603,  0.16666603, -0.83333397,  0.33333397]], dtype=float64)
+           
     Notes
     -----
-    Dynstatcov can only be compiled with either single (`numpy.float32`) or
+    Dynstatcov can be compiled with either single (`numpy.float32`) or
     double precision (`numpy.float64`). You might have to test, which version
     you are running. By default, its double precision.
     If required, you can always change typedef of `DTYPE_t` in the cython code
@@ -146,7 +156,7 @@ cdef class Dynstatcov:
         PyMem_Free(self.sum)
         PyMem_Free(self.__mean)
         
-    cpdef update(self, DTYPE_t[::1] x):
+    cpdef update(self, DTYPE_t[::1] x, int subtract = 0):
         r"""
         Add a new sample and update the co-variance matrix.
         
@@ -155,6 +165,8 @@ cdef class Dynstatcov:
         x : ndarray
             One-dimensional row-major/C-ordered array representing an
             observation.
+        subtract : int
+            If non-zero, the new sample will be removed rather than added.
             
         Notes
         -----
@@ -162,8 +174,11 @@ cdef class Dynstatcov:
         responsible, that it fits the length of the observations passed
         on class initialization.
         """
-        self.__update(&x[0])
-     
+        if 0 == subtract:
+            self.__update_add(&x[0])
+        else:
+            self.__update_sub(&x[0])
+            
     cpdef np.ndarray get_cov(self):
         r"""
         Full co-variance matrix.
@@ -229,7 +244,7 @@ cdef class Dynstatcov:
         cdef SIZE_t n_samples = self.n_samples
         return n_samples
         
-    cdef void __update(self, DTYPE_t* x) nogil:
+    cdef void __update_add(self, DTYPE_t* x) nogil:
         "Add a new sample and update the co-variance matrix."
         cdef DTYPE_t* sum = self.sum
         cdef DTYPE_t* squaresum = self.squaresum
@@ -243,6 +258,21 @@ cdef class Dynstatcov:
         self.n_samples = n_samples
         
         self.__compute_covariance_matrix()
+        
+    cdef void __update_sub(self, DTYPE_t* x) nogil:
+        "Remove a sample and update the co-variance matrix."
+        cdef DTYPE_t* sum = self.sum
+        cdef DTYPE_t* squaresum = self.squaresum
+        cdef SIZE_t n_samples = self.n_samples
+        cdef SIZE_t n_features = self.n_features
+        
+        n_samples -= 1
+        upper_sub_sample_autocorrelation_matrix(squaresum, x, n_features)
+        vector_sub(sum, x, n_features)
+        
+        self.n_samples = n_samples
+        
+        self.__compute_covariance_matrix()        
         
     cdef void __compute_covariance_matrix(self) nogil:
         "Compute the co-variance matrix from its components."
@@ -318,6 +348,13 @@ cdef inline void vector_add(DTYPE_t* x, DTYPE_t* y, SIZE_t length) nogil:
     
     for p in range(length):
         x[p] += y[p]
+        
+cdef inline void vector_sub(DTYPE_t* x, DTYPE_t* y, SIZE_t length) nogil:
+    "Subtract vector y from vector x."
+    cdef SIZE_t p = 0
+    
+    for p in range(length):
+        x[p] -= y[p]        
 
 cdef inline void upper_add_sample_autocorrelation_matrix(DTYPE_t* X, DTYPE_t* x, SIZE_t length) nogil:
     "Add the outer product of x with itself to the upper triangular part of X."
@@ -328,6 +365,17 @@ cdef inline void upper_add_sample_autocorrelation_matrix(DTYPE_t* X, DTYPE_t* x,
         for p2 in range(p1, length):
             X[0] += x[p1] * x[p2]
             X += 1
+            
+cdef inline void upper_sub_sample_autocorrelation_matrix(DTYPE_t* X, DTYPE_t* x, SIZE_t length) nogil:
+    "Subtract the outer product of x with itself to the upper triangular part of X."
+    cdef SIZE_t p1 = 0
+    cdef SIZE_t p2 = 0
+    
+    for p1 in range(length):
+        for p2 in range(p1, length):
+            X[0] -= x[p1] * x[p2]
+            X += 1
+            
 #####
 # Cpdef functions to expose cdef function for unittesting. Can be deleted if no tests are used.
 #####
@@ -336,9 +384,15 @@ cpdef int _test_wrapper_n_elements(SIZE_t length):
 
 cpdef _test_wrapper_upper_add_sample_autocorrelation_matrix(DTYPE_t[::1] X, DTYPE_t[::1] x, SIZE_t length):
     upper_add_sample_autocorrelation_matrix(&X[0], &x[0], length)
+    
+cpdef _test_wrapper_upper_sub_sample_autocorrelation_matrix(DTYPE_t[::1] X, DTYPE_t[::1] x, SIZE_t length):
+    upper_sub_sample_autocorrelation_matrix(&X[0], &x[0], length)    
         
 cpdef _test_wrapper_vector_add(DTYPE_t[::1] x, DTYPE_t[::1] y, SIZE_t length):
     vector_add(&x[0], &y[0], length)
+    
+cpdef _test_wrapper_vector_sub(DTYPE_t[::1] x, DTYPE_t[::1] y, SIZE_t length):
+    vector_sub(&x[0], &y[0], length)    
     
 cpdef _test_wrapper_vector_multiply_scalar(DTYPE_t[::1] X, DTYPE_t a, SIZE_t length):
     vector_multiply_scalar(&X[0], a, length)

@@ -18,7 +18,7 @@ setup(
     url='https://github.com/loli/dynstatcov',
     license='LICENSE.txt',
     keywords='dynamic statistical co-variance matrix update cython',
-    long_description=read('README.txt'),
+    long_description=read('README.rst'),
     
     classifiers=[
         'Development Status :: 5 - Production/Stable',

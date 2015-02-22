@@ -121,8 +121,8 @@ if os.path.isdir(themedir):
         "edit_link": False,
         "sidebar": "left",
         "scipy_org_logo": False,
-        "rootlinks": [('https://github.com/loli/medpy/', 'GitHub'),
-                      ('https://pypi.python.org/pypi/MedPy/', 'PyPi')],
+        "rootlinks": [('https://github.com/loli/dynstatcov/', 'GitHub'),
+                      ('https://pypi.python.org/pypi/DynStatCov/', 'PyPi')],
         "navigation_links": True
     }
 else:

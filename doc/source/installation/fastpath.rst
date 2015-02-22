@@ -8,6 +8,6 @@ Installing DynStatCov the fast way
     
 .. note::
 
-    All installation instructions are for Ubuntu, but they should be simmilar for other distributions.
+    All installation instructions are for Ubuntu, but they should be similar for other distributions.
 
 
