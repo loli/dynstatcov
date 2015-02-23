@@ -29,6 +29,7 @@ Finally rerun the build
 
 Troubleshooting
 ###############
+If you get an "couldn't import module 'dynstatcov'" error, make sure to install it first.
 
 Sometimes it helps to remove the build cache
 

@@ -30,8 +30,9 @@ Usage
 
 Reference
 ---------
-
-.. toctree::
-    :maxdepth: 1
-
-    dynstatcov
+.. currentmodule:: dynstatcov
+.. module:: dynstatcov
+.. autosummary::
+    :toctree: generated/
+    
+    dynstatcov.Dynstatcov
