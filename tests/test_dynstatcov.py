@@ -4,7 +4,7 @@ import nose
 import numpy
 from numpy.testing import assert_allclose, assert_array_equal, assert_equal, assert_raises
 
-from dynstatcov import dynstatcov
+import dynstatcov
 
 ####
 # Constants

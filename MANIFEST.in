@@ -1,0 +1,8 @@
+include README.rst
+include LICENSE.txt
+
+include ez_setup.py
+
+include dynstatcov/dynstatcov.pyx
+include dynstatcov/dynstatcov.pxd
+include dynstatcov/dynstatcov.c
